@@ -68,3 +68,9 @@ class sobel_gradient_thresholder:
         binary_output = np.zeros_like(grad_dir)
         binary_output[(grad_dir > thresh[0]) & (grad_dir <= thresh[1])] = 1
         return binary_output
+
+
+def transform_perspective(image, src, dst):
+    M = cv2.getPerspectiveTransform(src, dst)
+    image_size = (image.shape[1], image.shape[0])
+    return cv2.warpPerspective(image, M, image_size, flags=cv2.INTER_LINEAR)
