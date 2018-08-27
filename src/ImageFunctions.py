@@ -36,7 +36,7 @@ def color_threshold(image, channel=0, thresh=(0, 255)):
     return binary
 
 
-class sobel_gradient_thresholder:
+class SobelGradientThresholder:
     def __init__(self, image, sobel_kernel=3):
         self.gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         self.sobel_kernel = sobel_kernel
@@ -74,3 +74,42 @@ def transform_perspective(image, src, dst):
     M = cv2.getPerspectiveTransform(src, dst)
     image_size = (image.shape[1], image.shape[0])
     return cv2.warpPerspective(image, M, image_size, flags=cv2.INTER_LINEAR)
+
+
+def weighted_img(img, initial_img, α=0.8, β=1., γ=0.):
+    """
+    `img` is the output of the hough_lines(), An image with lines drawn on it.
+    Should be a blank image (all black) with lines drawn on it.
+
+    `initial_img` should be the image before any processing.
+
+    The result image is computed as follows:
+
+    initial_img * α + img * β + γ
+    NOTE: initial_img and img must be the same shape!
+    """
+    return cv2.addWeighted(initial_img, α, img, β, γ)
+
+
+def image_overlay(overlay, background_img, overlay_transparency=0.0):
+    """
+    Use an image as an overlay on another image that serves as background.
+    overlay_transparency can be modified to make the overlay transparent so that the background
+    is still visible (overlay_transparency must be between 0.0 and 1.0).
+
+    Returns new image where both images have been combined.
+    """
+    overlay_gray = cv2.cvtColor(overlay, cv2.COLOR_RGB2GRAY)
+    _, mask = cv2.threshold(overlay_gray, 1, 255, cv2.THRESH_BINARY)
+    mask_inv = cv2.bitwise_not(mask)
+
+    # Mask the overlay, so that it does not add black values to the background around
+    # the overlay.
+    background = cv2.bitwise_and(background_img, background_img, mask=mask_inv)
+    foreground = cv2.bitwise_and(overlay, overlay, mask=mask)
+
+    if overlay_transparency > 0.0 and overlay_transparency <= 1.0:
+        background_mask = cv2.bitwise_and(background_img, background_img, mask=mask)
+        foreground = weighted_img(foreground, background_mask, β=(1 - overlay_transparency))
+
+    return cv2.add(foreground, background)
