@@ -207,8 +207,10 @@ class LaneDetector:
         target_image = self.color_lanes(target_image)
 
         # Plots the left and right polynomials on the lane lines
-        plt.plot(self.left_fit_x, self.plot_y, color='yellow')
-        plt.plot(self.right_fit_x, self.plot_y, color='yellow')
+        left_line_coords = np.vstack((self.left_fit_x, self.plot_y)).astype(np.int32).T
+        right_line_coords = np.vstack((self.right_fit_x, self.plot_y)).astype(np.int32).T
+        cv2.polylines(target_image, [left_line_coords], False, color=(255, 255, 0), thickness=2)
+        cv2.polylines(target_image, [right_line_coords], False, color=(255, 255, 0), thickness=2)
 
         return target_image
 
