@@ -195,9 +195,10 @@ class PolySearchStrategy(LaneFindingStrategy):
 
 
 class LaneDetector:
-    def __init__(self, n_windows=9, margin=80, min_pix=40, poly_margin=50):
+    def __init__(self, n_windows=9, margin=100, min_pix=50, poly_margin=100):
         self.left_fit_x, self.right_fit_x, self.plot_y = None, None, None
         self.left_x, self.left_y, self.right_x, self.right_y = None, None, None, None
+        self.left_fit, self.right_fit = None, None
         self.image = None
         self.last_used_strategy = None
 
@@ -214,17 +215,21 @@ class LaneDetector:
     def run_on_image(self, image):
         self.image = image
 
-        left_x, left_y, right_x, right_y = self.find_lane_pixels(self.sliding_window)
+        strategy = self.sliding_window if self.last_used_strategy is None else self.poly_search
+        self.last_used_strategy = strategy
+
+        left_x, left_y, right_x, right_y = self.find_lane_pixels(strategy)
         self.left_x, self.left_y, self.right_x, self.right_y = left_x, left_y, right_x, right_y
 
-        left_fit_x, right_fit_x, plot_y = self.fit_poly(image, left_x, left_y, right_x, right_y)
+        left_fit, right_fit, left_fit_x, right_fit_x, plot_y = self.fit_poly(image, left_x, left_y, right_x, right_y)
+        self.left_fit, self.right_fit = left_fit, right_fit
         self.left_fit_x, self.right_fit_x, self.plot_y = left_fit_x, right_fit_x, plot_y
-
-        self.last_used_strategy = self.sliding_window
 
         return left_fit_x, right_fit_x, plot_y
 
     def find_lane_pixels(self, strategy):
+        if strategy is self.poly_search:
+            return strategy.find_lane(self.image, self.left_fit, self.right_fit)
         return strategy.find_lane(self.image)
 
     def get_visualization(self):
@@ -268,7 +273,7 @@ class LaneDetector:
             left_fit_x = 1 * plot_y ** 2 + 1 * plot_y
             right_fit_x = 1 * plot_y ** 2 + 1 * plot_y
 
-        return left_fit_x, right_fit_x, plot_y
+        return left_fit, right_fit, left_fit_x, right_fit_x, plot_y
 
 
 # class CurvatureCalculator: def measure_curvature(right_fit, left_fit): return left_curverad, right_curverad

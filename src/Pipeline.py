@@ -6,9 +6,9 @@ import utils
 
 
 class Pipeline:
-    def __init__(self, camera_calibration_file):
+    def __init__(self, camera_calibration_file, **kwargs):
         self.camera_calibration_file = camera_calibration_file
-        self.lane_det = ld.LaneDetector(n_windows=9, margin=80, min_pix=40, poly_margin=50)
+        self.lane_det = ld.LaneDetector(**kwargs)
 
     def execute(self, image):
         undistorted_image, binary_warped = self.preprocess_image(image)
@@ -24,6 +24,11 @@ class Pipeline:
 
         image_with_area = cv2.addWeighted(undistorted_image, 1., lane_area_unwarped, .3, 1)
         return imgf.image_overlay(lanes_unwarped, image_with_area, overlay_transparency=.1)
+
+    def evaluate(self, image):
+        undistorted_image, binary_warped = self.preprocess_image(image)
+        self.lane_det.run_on_image(binary_warped)
+        return self.lane_det.get_visualization()
 
     def preprocess_image(self, image):
         undistorted_image = imgf.undistort(image, self.camera_calibration_file)
