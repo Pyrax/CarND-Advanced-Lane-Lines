@@ -42,12 +42,10 @@ class LaneFindingStrategy:
         out_image = np.copy(target_image)
 
         # Plots the left and right polynomials on the lane lines
-        # left_line_coords = np.vstack((left_fit_x, plot_y)).astype(np.int32).T
-        # right_line_coords = np.vstack((right_fit_x, plot_y)).astype(np.int32).T
         left_line_coords = np.array([np.transpose(np.vstack([left_fit_x, plot_y]))])
         right_line_coords = np.array([np.transpose(np.vstack([right_fit_x, plot_y]))])
-        cv2.polylines(out_image, [left_line_coords], False, color=(255, 255, 0), thickness=2)
-        cv2.polylines(out_image, [right_line_coords], False, color=(255, 255, 0), thickness=2)
+        cv2.polylines(out_image, np.int_([left_line_coords]), False, color=(255, 255, 0), thickness=2)
+        cv2.polylines(out_image, np.int_([right_line_coords]), False, color=(255, 255, 0), thickness=2)
 
         return out_image
 
@@ -230,7 +228,8 @@ class LaneDetector:
         return strategy.find_lane(self.image)
 
     def get_visualization(self):
-        return self.last_used_strategy.visualize_lanes(self.left_x, self.left_y, self.right_x, self.right_y,
+        return self.last_used_strategy.visualize_lanes(self.image,
+                                                       self.left_x, self.left_y, self.right_x, self.right_y,
                                                        self.left_fit_x, self.right_fit_x, self.plot_y)
 
     def get_lane_area(self):
