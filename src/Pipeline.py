@@ -8,6 +8,7 @@ import utils
 class Pipeline:
     def __init__(self, camera_calibration_file, **kwargs):
         self.camera_calibration_file = camera_calibration_file
+        self.undistorter = None # will be set with first processed image because it needs image size
         self.lane_det = ld.LaneDetector(**kwargs)
 
     def execute(self, image):
@@ -31,7 +32,9 @@ class Pipeline:
         return self.lane_det.get_visualization()
 
     def preprocess_image(self, image):
-        undistorted_image = imgf.undistort(image, self.camera_calibration_file)
+        if self.undistorter is None:
+            self.undistorter = imgf.Undistorter(self.camera_calibration_file, image.shape[1], image.shape[0])
+        undistorted_image = self.undistorter.apply(image)
 
         hls_image = imgf.to_hls(undistorted_image)
         gray_image = imgf.to_grayscale(undistorted_image)

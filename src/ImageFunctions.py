@@ -11,6 +11,23 @@ def undistort(image, coeff_fname):
     return cv2.undistort(image, mtx, dist, None, mtx)
 
 
+class Undistorter:
+    def __init__(self, coeff_fname, image_width, image_height):
+        dist_pickle = None
+        with open(coeff_fname, 'rb') as f:
+            dist_pickle = pickle.load(f)
+
+        if dist_pickle is not None:
+            mtx, dist = dist_pickle['mtx'], dist_pickle['dist']
+            # see: https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_calib3d/py_calibration/py_calibration.html
+            self.map_x, self.map_y = cv2.initUndistortRectifyMap(mtx, dist, None, mtx, (image_width, image_height), 5)
+        else:
+            raise Exception('No pickle data for camera calibration loaded')
+
+    def apply(self, image):
+        return cv2.remap(image, self.map_x, self.map_y, cv2.INTER_LINEAR)
+
+
 def to_grayscale(image):
     return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
