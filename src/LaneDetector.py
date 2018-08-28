@@ -28,68 +28,40 @@ class Lane:
         self.all_y = None
 
 
-# class SlidingWindowStrategy:
+class LaneFindingStrategy:
+    def color_lane_pixels(self, target_image, left_x, left_y, right_x, right_y):
+        out_image = np.copy(target_image)
+
+        # Colors in the left and right lane regions
+        out_image[left_y, left_x] = [255, 0, 0]
+        out_image[right_y, right_x] = [0, 0, 255]
+
+        return out_image
+
+    def draw_lanes(self, target_image, left_fit_x, right_fit_x, plot_y):
+        out_image = np.copy(target_image)
+
+        # Plots the left and right polynomials on the lane lines
+        # left_line_coords = np.vstack((left_fit_x, plot_y)).astype(np.int32).T
+        # right_line_coords = np.vstack((right_fit_x, plot_y)).astype(np.int32).T
+        left_line_coords = np.array([np.transpose(np.vstack([left_fit_x, plot_y]))])
+        right_line_coords = np.array([np.transpose(np.vstack([right_fit_x, plot_y]))])
+        cv2.polylines(out_image, [left_line_coords], False, color=(255, 255, 0), thickness=2)
+        cv2.polylines(out_image, [right_line_coords], False, color=(255, 255, 0), thickness=2)
+
+        return out_image
 
 
-class LaneDetector:
-    def __init__(self, n_windows=9, margin=80, min_pix=40, poly_margin=50):
-        self.left_fit_x, self.right_fit_x, self.plot_y = None, None, None
-        self.left_x, self.left_y, self.right_x, self.right_y = None, None, None, None
+class SlidingWindowStrategy(LaneFindingStrategy):
+    def __init__(self, n_windows, margin, min_pix):
         self.sliding_windows_left = None
         self.sliding_windows_right = None
-        self.image = None
 
-        # TODO: use lane class to store the properties above
-        self.left_lane = Lane()
-        self.right_lane = Lane()
-
-        # Adjustable parameters for sliding windows:
         self.n_windows = n_windows
         self.margin = margin
         self.min_pix = min_pix
 
-        # Parameters for searching around polynomial function:
-        self.poly_margin = poly_margin
-
-    def run_on_image(self, image):
-        self.image = image
-        self.sliding_windows_left = []
-        self.sliding_windows_right = []
-
-        left_x, left_y, right_x, right_y = self.find_lane_pixels(self.sliding_window)
-        self.left_x, self.left_y, self.right_x, self.right_y = left_x, left_y, right_x, right_y
-
-        left_fit_x, right_fit_x, plot_y = self.fit_poly(image, left_x, left_y, right_x, right_y)
-        self.left_fit_x, self.right_fit_x, self.plot_y = left_fit_x, right_fit_x, plot_y
-
-        return left_fit_x, right_fit_x, plot_y
-
-    def get_visualization(self):
-        return self.visualize_lanes(self.left_x, self.left_y, self.right_x, self.right_y)
-
-    def get_lane_area(self):
-        # Create an image to draw the lines on
-        zeroed_image = np.zeros_like(self.image).astype(np.uint8)
-        marked_image = np.dstack((zeroed_image, zeroed_image, zeroed_image))
-
-        # Recast the x and y points into usable format for cv2.fillPoly()
-        pts_left = np.array([np.transpose(np.vstack([self.left_fit_x, self.plot_y]))])
-        pts_right = np.array([np.flipud(np.transpose(np.vstack([self.right_fit_x, self.plot_y])))])
-        pts = np.hstack((pts_left, pts_right))
-
-        # Draw the lane onto the warped blank image
-        cv2.fillPoly(marked_image, np.int_([pts]), (0, 255, 0))
-        return marked_image
-
-    def get_lanes(self):
-        zeros = np.zeros_like(self.image).astype(np.uint8)
-        lanes_image = np.dstack((zeros, zeros, zeros))
-        return self.color_lanes(lanes_image)
-
-    def find_lane_pixels(self, strategy):
-        return strategy(self.image)
-
-    def sliding_window(self, image):
+    def find_lane(self, image):
         # Take a histogram of the bottom half of the image
         image_height = image.shape[0]
         half_height = image_height // 2
@@ -97,12 +69,12 @@ class LaneDetector:
 
         # Find the peak of the left and right halves of the histogram
         # These will be the starting point for the left and right lines
-        midpoint = np.int(histogram.shape[0]//2)
+        midpoint = np.int(histogram.shape[0] // 2)
         left_x_base = np.argmax(histogram[:midpoint])
         right_x_base = np.argmax(histogram[midpoint:]) + midpoint
 
         # Set height of windows - based on nwindows above and image shape
-        window_height = np.int(image_height//self.n_windows)
+        window_height = np.int(image_height // self.n_windows)
         # Identify the x and y positions of all nonzero pixels in the image
         nonzero = image.nonzero()
         nonzero_y = np.array(nonzero[0])
@@ -115,11 +87,14 @@ class LaneDetector:
         left_lane_inds = []
         right_lane_inds = []
 
+        self.sliding_windows_left = []
+        self.sliding_windows_right = []
+
         # Step through the windows one by one
         for window in range(self.n_windows):
             # Identify window boundaries in x and y (and right and left)
-            win_y_low = image_height - (window+1)*window_height
-            win_y_high = image_height - window*window_height
+            win_y_low = image_height - (window + 1) * window_height
+            win_y_high = image_height - window * window_height
             win_x_left_low = left_x_current - self.margin
             win_x_left_high = left_x_current + self.margin
             win_x_right_low = right_x_current - self.margin
@@ -129,8 +104,10 @@ class LaneDetector:
             self.sliding_windows_right.append([(win_x_right_low, win_y_low), (win_x_right_high, win_y_high)])
 
             # Identify the nonzero pixels in x and y within the window
-            good_left_inds = ((nonzero_y >= win_y_low) & (nonzero_y < win_y_high) & (nonzero_x >= win_x_left_low) & (nonzero_x < win_x_left_high)).nonzero()[0]
-            good_right_inds = ((nonzero_y >= win_y_low) & (nonzero_y < win_y_high) & (nonzero_x >= win_x_right_low) & (nonzero_x < win_x_right_high)).nonzero()[0]
+            good_left_inds = ((nonzero_y >= win_y_low) & (nonzero_y < win_y_high) & (nonzero_x >= win_x_left_low) & (
+                        nonzero_x < win_x_left_high)).nonzero()[0]
+            good_right_inds = ((nonzero_y >= win_y_low) & (nonzero_y < win_y_high) & (nonzero_x >= win_x_right_low) & (
+                        nonzero_x < win_x_right_high)).nonzero()[0]
 
             # Append these indices to the lists
             left_lane_inds.append(good_left_inds)
@@ -158,7 +135,23 @@ class LaneDetector:
 
         return left_x, left_y, right_x, right_y
 
-    def search_around_poly(self, image):
+    def visualize_lanes(self, image, left_x, left_y, right_x, right_y, left_fit_x, right_fit_x, plot_y):
+        target_image = np.dstack((image, image, image)) * 255
+
+        # Draw the sliding windows on the visualization image
+        for idx in range(len(self.sliding_windows_left)):
+            cv2.rectangle(target_image, self.sliding_windows_left[idx][0], self.sliding_windows_left[idx][1], (0, 255, 0), 2)
+            cv2.rectangle(target_image, self.sliding_windows_right[idx][0], self.sliding_windows_right[idx][1], (0, 255, 0), 2)
+
+        target_image = self.color_lane_pixels(target_image, left_x, left_y, right_x, right_y)
+        return self.draw_lanes(target_image, left_fit_x, right_fit_x, plot_y)
+
+
+class PolySearchStrategy(LaneFindingStrategy):
+    def __init__(self, poly_margin):
+        self.poly_margin = poly_margin
+
+    def find_lane(self, image, left_fit, right_fit):
         # Grab activated pixels
         nonzero = image.nonzero()
         nonzero_y = np.array(nonzero[0])
@@ -178,6 +171,88 @@ class LaneDetector:
 
         return left_x, left_y, right_x, right_y
 
+    def visualize_lanes(self, image, left_x, left_y, right_x, right_y, left_fit_x, right_fit_x, plot_y):
+        # Create an image to draw on and an image to show the selection window
+        target_image = np.dstack((image, image, image)) * 255
+        window_image = np.zeros_like(target_image)
+
+        target_image = self.color_lane_pixels(target_image, left_x, left_y, right_x, right_y)
+
+        # Generate a polygon to illustrate the search window area
+        # And recast the x and y points into usable format for cv2.fillPoly()
+        left_line_window1 = np.array([np.transpose(np.vstack([left_fit_x - self.poly_margin, plot_y]))])
+        left_line_window2 = np.array([np.flipud(np.transpose(np.vstack([left_fit_x + self.poly_margin, plot_y])))])
+        left_line_pts = np.hstack((left_line_window1, left_line_window2))
+
+        right_line_window1 = np.array([np.transpose(np.vstack([right_fit_x - self.poly_margin, plot_y]))])
+        right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fit_x + self.poly_margin, plot_y])))])
+        right_line_pts = np.hstack((right_line_window1, right_line_window2))
+
+        # Draw the lane onto the warped blank image
+        cv2.fillPoly(window_image, np.int_([left_line_pts]), (0, 255, 0))
+        cv2.fillPoly(window_image, np.int_([right_line_pts]), (0, 255, 0))
+        result = cv2.addWeighted(target_image, 1, window_image, 0.3, 0)
+
+        return self.draw_lanes(result, left_fit_x, right_fit_x, plot_y)
+
+
+class LaneDetector:
+    def __init__(self, n_windows=9, margin=80, min_pix=40, poly_margin=50):
+        self.left_fit_x, self.right_fit_x, self.plot_y = None, None, None
+        self.left_x, self.left_y, self.right_x, self.right_y = None, None, None, None
+        self.image = None
+        self.last_used_strategy = None
+
+        # TODO: use lane class to store the properties above
+        self.left_lane = Lane()
+        self.right_lane = Lane()
+
+        # Adjustable parameters for sliding windows:
+        self.sliding_window = SlidingWindowStrategy(n_windows, margin, min_pix)
+
+        # Parameters for searching around polynomial function:
+        self.poly_search = PolySearchStrategy(poly_margin)
+
+    def run_on_image(self, image):
+        self.image = image
+
+        left_x, left_y, right_x, right_y = self.find_lane_pixels(self.sliding_window)
+        self.left_x, self.left_y, self.right_x, self.right_y = left_x, left_y, right_x, right_y
+
+        left_fit_x, right_fit_x, plot_y = self.fit_poly(image, left_x, left_y, right_x, right_y)
+        self.left_fit_x, self.right_fit_x, self.plot_y = left_fit_x, right_fit_x, plot_y
+
+        self.last_used_strategy = self.sliding_window
+
+        return left_fit_x, right_fit_x, plot_y
+
+    def find_lane_pixels(self, strategy):
+        return strategy.find_lane(self.image)
+
+    def get_visualization(self):
+        return self.last_used_strategy.visualize_lanes(self.left_x, self.left_y, self.right_x, self.right_y,
+                                                       self.left_fit_x, self.right_fit_x, self.plot_y)
+
+    def get_lane_area(self):
+        # Create an image to draw the lines on
+        zeroed_image = np.zeros_like(self.image).astype(np.uint8)
+        marked_image = np.dstack((zeroed_image, zeroed_image, zeroed_image))
+
+        # Recast the x and y points into usable format for cv2.fillPoly()
+        pts_left = np.array([np.transpose(np.vstack([self.left_fit_x, self.plot_y]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([self.right_fit_x, self.plot_y])))])
+        pts = np.hstack((pts_left, pts_right))
+
+        # Draw the lane onto the warped blank image
+        cv2.fillPoly(marked_image, np.int_([pts]), (0, 255, 0))
+        return marked_image
+
+    def get_lanes(self):
+        zeros = np.zeros_like(self.image).astype(np.uint8)
+        lanes_image = np.dstack((zeros, zeros, zeros))
+        return self.last_used_strategy.color_lane_pixels(lanes_image,
+                                                         self.left_x, self.left_y, self.right_x, self.right_y)
+
     def fit_poly(self, image, left_x, left_y, right_x, right_y):
         # Fit a second order polynomial to each lane using `np.polyfit`
         left_fit = np.polyfit(left_y, left_x, 2)
@@ -196,58 +271,5 @@ class LaneDetector:
 
         return left_fit_x, right_fit_x, plot_y
 
-    def visualize_lanes(self, left_x, left_y, right_x, right_y):
-        target_image = np.dstack((self.image, self.image, self.image)) * 255
-
-        # Draw the sliding windows on the visualization image
-        for idx in range(len(self.sliding_windows_left)):
-            cv2.rectangle(target_image, self.sliding_windows_left[idx][0], self.sliding_windows_left[idx][1], (0, 255, 0), 2)
-            cv2.rectangle(target_image, self.sliding_windows_right[idx][0], self.sliding_windows_right[idx][1], (0, 255, 0), 2)
-
-        target_image = self.color_lanes(target_image)
-
-        # Plots the left and right polynomials on the lane lines
-        left_line_coords = np.vstack((self.left_fit_x, self.plot_y)).astype(np.int32).T
-        right_line_coords = np.vstack((self.right_fit_x, self.plot_y)).astype(np.int32).T
-        cv2.polylines(target_image, [left_line_coords], False, color=(255, 255, 0), thickness=2)
-        cv2.polylines(target_image, [right_line_coords], False, color=(255, 255, 0), thickness=2)
-
-        return target_image
-
-    def color_lanes(self, target_image):
-        # Colors in the left and right lane regions
-        target_image[self.left_y, self.left_x] = [255, 0, 0]
-        target_image[self.right_y, self.right_x] = [0, 0, 255]
-        return target_image
-
 
 # class CurvatureCalculator: def measure_curvature(right_fit, left_fit): return left_curverad, right_curverad
-
-"""
-        if self.visualize_steps:
-            # Create an image to draw on and an image to show the selection window
-            self.visualization = np.dstack((image, image, image)) * 255
-            window_img = np.zeros_like(self.visualization)
-            # Color in left and right line pixels
-            self.visualization[nonzero_y[left_lane_inds], nonzero_x[left_lane_inds]] = [255, 0, 0]
-            self.visualization[nonzero_y[right_lane_inds], nonzero_x[right_lane_inds]] = [0, 0, 255]
-
-            # Generate a polygon to illustrate the search window area
-            # And recast the x and y points into usable format for cv2.fillPoly()
-            left_line_window1 = np.array([np.transpose(np.vstack([left_fit_x - self.poly_margin, plot_y]))])
-            left_line_window2 = np.array([np.flipud(np.transpose(np.vstack([left_fit_x + self.poly_margin, plot_y])))])
-            left_line_pts = np.hstack((left_line_window1, left_line_window2))
-
-            right_line_window1 = np.array([np.transpose(np.vstack([right_fit_x - self.poly_margin, plot_y]))])
-            right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fit_x + self.poly_margin, plot_y])))])
-            right_line_pts = np.hstack((right_line_window1, right_line_window2))
-
-            # Draw the lane onto the warped blank image
-            cv2.fillPoly(window_img, np.int_([left_line_pts]), (0, 255, 0))
-            cv2.fillPoly(window_img, np.int_([right_line_pts]), (0, 255, 0))
-            result = cv2.addWeighted(self.visualization, 1, window_img, 0.3, 0)
-
-            # Plot the polynomial lines onto the image
-            plt.plot(left_fit_x, plot_y, color='yellow')
-            plt.plot(right_fit_x, plot_y, color='yellow')
-"""
