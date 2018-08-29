@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from Metrics import Metrics
 from LaneFindingStrategies import SlidingWindowStrategy, PolySearchStrategy
 
 
@@ -38,6 +39,8 @@ class LaneDetector:
         # TODO: use lane class to store the properties above
         self.left_lane = Lane()
         self.right_lane = Lane()
+
+        self.metrics = Metrics()
 
         # Adjustable parameters for sliding windows:
         self.sliding_window = SlidingWindowStrategy(n_windows, margin, min_pix)
@@ -90,6 +93,21 @@ class LaneDetector:
         return self.last_used_strategy.color_lane_pixels(lanes_image,
                                                          self.left_x, self.left_y, self.right_x, self.right_y)
 
+    def display_metrics(self, display_image):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+
+        # Display the curvature
+        left_curverad, right_curverad = self.metrics.measure_curvature_real(self.left_fit, self.right_fit, self.plot_y)
+        cv2.putText(display_image, f'Left curvature radius: {left_curverad:.4f}m', (40, 60),
+                    font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(display_image, f'Right curvature radius: {right_curverad:.4f}m', (40, 100),
+                    font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+        # Display car's position relative to the center
+        center_dist = self.metrics.measure_car_position(self.image, self.left_fit, self.right_fit, self.plot_y)
+        cv2.putText(display_image, f'Position to center: {center_dist:.4f}m', (40, 140), font, 1, (255, 255, 255),
+                    2, cv2.LINE_AA)
+
     def fit_poly(self, image, left_x, left_y, right_x, right_y):
         # Fit a second order polynomial to each lane using `np.polyfit`
         left_fit = np.polyfit(left_y, left_x, 2)
@@ -107,6 +125,3 @@ class LaneDetector:
             right_fit_x = 1 * plot_y ** 2 + 1 * plot_y
 
         return left_fit, right_fit, left_fit_x, right_fit_x, plot_y
-
-
-# class CurvatureCalculator: def measure_curvature(right_fit, left_fit): return left_curverad, right_curverad

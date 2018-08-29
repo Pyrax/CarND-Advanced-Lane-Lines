@@ -24,6 +24,7 @@ class Pipeline:
         lanes_unwarped = imgf.transform_perspective(colored_lanes, trans_dst, trans_src)
 
         image_with_area = cv2.addWeighted(undistorted_image, 1., lane_area_unwarped, .3, 1)
+        self.lane_det.display_metrics(image_with_area)
         return imgf.image_overlay(lanes_unwarped, image_with_area, overlay_transparency=.1)
 
     def evaluate(self, image):
