@@ -57,7 +57,7 @@ class LaneDetector:
         left_x, left_y, right_x, right_y = self.find_lane_pixels(strategy)
         self.left_x, self.left_y, self.right_x, self.right_y = left_x, left_y, right_x, right_y
 
-        left_fit, right_fit, left_fit_x, right_fit_x, plot_y = self.fit_poly(image, left_x, left_y, right_x, right_y)
+        left_fit, right_fit, left_fit_x, right_fit_x, plot_y = self.fit_poly()
         self.left_fit, self.right_fit = left_fit, right_fit
         self.left_fit_x, self.right_fit_x, self.plot_y = left_fit_x, right_fit_x, plot_y
 
@@ -108,13 +108,13 @@ class LaneDetector:
         cv2.putText(display_image, f'Position to center: {center_dist:.4f}m', (40, 140), font, 1, (255, 255, 255),
                     2, cv2.LINE_AA)
 
-    def fit_poly(self, image, left_x, left_y, right_x, right_y):
+    def fit_poly(self):
         # Fit a second order polynomial to each lane using `np.polyfit`
-        left_fit = np.polyfit(left_y, left_x, 2)
-        right_fit = np.polyfit(right_y, right_x, 2)
+        left_fit = np.polyfit(self.left_y, self.left_x, 2)
+        right_fit = np.polyfit(self.right_y, self.right_x, 2)
 
         # Generate x and y values for plotting
-        plot_y = np.linspace(0, image.shape[0] - 1, image.shape[0])
+        plot_y = np.linspace(0, self.image.shape[0] - 1, self.image.shape[0])
         try:
             left_fit_x = left_fit[0] * plot_y ** 2 + left_fit[1] * plot_y + left_fit[2]
             right_fit_x = right_fit[0] * plot_y ** 2 + right_fit[1] * plot_y + right_fit[2]

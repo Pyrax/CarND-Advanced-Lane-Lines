@@ -67,17 +67,17 @@ class SobelGradientThresholder:
         binary_output[(scaled_sobel > thresh[0]) & (scaled_sobel <= thresh[1])] = 1
         return binary_output
 
-    def mag_thresh(self, mag_thresh=(0, 255)):
+    def mag_thresh(self, thresh=(0, 255)):
         abs_sobelx = np.absolute(cv2.Sobel(self.gray, cv2.CV_64F, 1, 0, ksize=self.sobel_kernel))
         abs_sobely = np.absolute(cv2.Sobel(self.gray, cv2.CV_64F, 0, 1, ksize=self.sobel_kernel))
         mag = np.sqrt((abs_sobelx ** 2) + (abs_sobely ** 2))
 
         scaled_mag = np.uint8(255 * mag / np.amax(mag))
         binary_output = np.zeros_like(scaled_mag)
-        binary_output[(scaled_mag > mag_thresh[0]) & (scaled_mag <= mag_thresh[1])] = 1
+        binary_output[(scaled_mag > thresh[0]) & (scaled_mag <= thresh[1])] = 1
         return binary_output
 
-    def dir_threshold(self, thresh=(0, np.pi/2)):
+    def dir_thresh(self, thresh=(0, np.pi/2)):
         abs_sobelx = np.absolute(cv2.Sobel(self.gray, cv2.CV_64F, 1, 0, ksize=self.sobel_kernel))
         abs_sobely = np.absolute(cv2.Sobel(self.gray, cv2.CV_64F, 0, 1, ksize=self.sobel_kernel))
 
