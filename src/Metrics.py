@@ -22,6 +22,19 @@ class Metrics:
         center_dist = car_pos - lane_middle
         return center_dist * self.xm_per_pix
 
+    def measure_lane_position(self, image, fit, plot_y):
+        # Define y-value where we want position of car
+        # We'll choose the maximum y-value, corresponding to the bottom of the image
+        y_eval = np.max(plot_y)
+
+        lane_pos = fit[0] * y_eval ** 2 + fit[1] * y_eval + fit[2]
+
+        # Assume camera is centered in the middle of the car
+        car_pos = image.shape[1] / 2
+
+        lane_dist_from_center = np.abs(car_pos - lane_pos)
+        return lane_dist_from_center * self.xm_per_pix
+
     def measure_curvature_pixels(self, left_fit, right_fit, plot_y):
         """
         Calculates the curvature of polynomial functions in pixels.

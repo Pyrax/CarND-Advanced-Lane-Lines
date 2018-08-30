@@ -33,7 +33,8 @@ class Pipeline:
     def evaluate(self, image):
         undistorted_image, binary_warped = self.preprocess_image(image)
         self.lane_det.run_on_image(binary_warped)
-        return self.lane_det.get_visualization()
+        visualization = self.lane_det.get_visualization()
+        return self.lane_det.display_debug_info(visualization)
 
     def preprocess_image(self, image):
         self.initialize_image_operators(image)
