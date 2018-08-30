@@ -33,7 +33,7 @@ class SlidingWindowStrategy(LaneFindingStrategy):
         self.margin = margin
         self.min_pix = min_pix
 
-    def find_lane(self, image):
+    def find_lane(self, image, *args, **kwargs):
         # Take a histogram of the bottom half of the image
         image_height = image.shape[0]
         half_height = image_height // 2
