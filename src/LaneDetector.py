@@ -67,7 +67,11 @@ class LaneDetector:
                                                               self.right_lane.current_fit)
         left_fit, right_fit, left_fit_x, right_fit_x = self.fit_poly(left_x, left_y, right_x, right_y)
 
-        left_curverad, right_curverad = self.metrics.measure_curvature_real(left_fit, right_fit, self.plot_y)
+        xm = self.metrics.xm_per_pix
+        ym = self.metrics.ym_per_pix
+        left_fit_cr, right_fit_cr, left_fit_x_cr, right_fit_x_cr = self.fit_poly(left_x * xm, left_y * ym,
+                                                                                 right_x * xm, right_y * ym)
+        left_curverad, right_curverad = self.metrics.measure_curvature_real(left_fit_cr, right_fit_cr, self.plot_y)
         left_lane_pos = self.metrics.measure_lane_position(image, left_fit, self.plot_y)
         right_lane_pos = self.metrics.measure_lane_position(image, right_fit, self.plot_y)
 

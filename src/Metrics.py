@@ -12,9 +12,9 @@ class Metrics:
         # We'll choose the maximum y-value, corresponding to the bottom of the image
         y_eval = np.max(plot_y)
 
-        left_lane_pos = left_fit[0] * y_eval ** 2 + left_fit[1] * y_eval + left_fit[2]
-        right_lane_pos = right_fit[0] * y_eval ** 2 + right_fit[1] * y_eval + right_fit[2]
-        lane_middle = np.abs(left_lane_pos - right_lane_pos)
+        left_lane_x = left_fit[0] * y_eval ** 2 + left_fit[1] * y_eval + left_fit[2]
+        right_lane_x = right_fit[0] * y_eval ** 2 + right_fit[1] * y_eval + right_fit[2]
+        lane_middle = (left_lane_x + right_lane_x) / 2  # average X values at bottom of image
 
         # Assume camera is centered in the middle of the car
         car_pos = image.shape[1] / 2
@@ -23,7 +23,7 @@ class Metrics:
         return center_dist * self.xm_per_pix
 
     def measure_lane_position(self, image, fit, plot_y):
-        # Define y-value where we want position of car
+        # Define y-value where we want position of lane
         # We'll choose the maximum y-value, corresponding to the bottom of the image
         y_eval = np.max(plot_y)
 
