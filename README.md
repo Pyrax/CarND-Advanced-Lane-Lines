@@ -35,7 +35,7 @@ The goals / steps of this project are the following:
 
 ### Camera Calibration
 
-The code for this step can be found in the IPython notebook located at "[./src/camera_calibration.ipynb](src/camera_calibration.ipynb)".
+The code for this step can be found in the IPython notebook located at "[src/camera_calibration.ipynb](./src/camera_calibration.ipynb)".
 
 To calibrate the camera I first determined that the chessboard pattern in the calibration images have 9x6 inside corners.
 Then, I prepared the "object points" which will be the (x, y, z) coordinates of the corners in the world. As I assumed
@@ -62,14 +62,14 @@ Here, both rear lights from the white car are visible on the original image but 
 ### Pipeline (single images)
 
 Steps I used to experiment with different parameters and algorithms to obtain different outputs are available in the
-"lane_finding" notebook at "[./src/lane_finding.ipynb](src/lane_finding.ipynb)" while the results of the final pipeline
-(which is "[./src/Pipeline.py](src/Pipeline.py)") have been produced by the "pipelined_lane_finding" notebook at 
-"[./src/pipelined_lane_finding.ipynb](src/pipelined_lane_finding.ipynb)".
+"lane_finding" notebook at "[src/lane_finding.ipynb](./src/lane_finding.ipynb)" while the results of the final pipeline
+(which is "[src/Pipeline.py](./src/Pipeline.py)") have been produced by the "pipelined_lane_finding" notebook at 
+"[src/pipelined_lane_finding.ipynb](./src/pipelined_lane_finding.ipynb)".
 
 #### 1. Example of a distortion-corrected image.
 
 Camera distortion is applied by first loading the undistortion coefficients from the previously stored pickle file at
-"[./src/calibration.pickle](src/calibration.pickle)" and then calling the `cv2.undistort()` function on an image. For 
+"[src/calibration.pickle](./src/calibration.pickle)" and then calling the `cv2.undistort()` function on an image. For 
 an example see the real scenario image from the camera calibration section.
 
 #### 2. Creating a thresholded binary image through color transforms and gradients
@@ -91,7 +91,7 @@ The following picture represents the thresholded image in binary format how it i
 
 ![Binary thresholded image][image4]
 
-It is done in the `preprocess_image()` function of the "[./src/Pipeline.py](pipeline)" in lines 44-55.
+It is done in the `preprocess_image()` function of the "[pipeline](./src/Pipeline.py)" in lines 44-55.
 
 #### 3. Perspective transform
 
@@ -113,7 +113,7 @@ Applying it in the examined images confirms that lines are roughly parallel in t
 
 ![Unwarped image][image5] ![Warped image][image6]
 
-In the "[./src/Pipeline.py](pipeline)" it is executed by the functions `warp()`, `unwarp()`, `transform_perspective()`
+In the "[pipeline](./src/Pipeline.py)" it is executed by the functions `warp()`, `unwarp()`, `transform_perspective()`
 and the `get_transform_params()` function which calculates the points.
 
 #### 4. Identifying lane-line pixels and fitting their positions with a polynomial
@@ -124,8 +124,8 @@ detected pixels to fit a second order polynomial through the average.
 
 ![Lane fitting][image7]
 
-I wrote a class called "[./src/LaneDetector.py](LaneDetector)" to perform these operations. In the file 
-"[./src/LaneFindingStrategies.py](LaneFindingStrategies.py)" there are the `SlidingWindowStrategy` and 
+I wrote a class called "[LaneDetector](./src/LaneDetector.py)" to perform these operations. In the file 
+"[LaneFindingStrategies.py](./src/LaneFindingStrategies.py)" there are the `SlidingWindowStrategy` and 
 `PolySearchStrategy` classes which describe the method how the lane pixels are identified from which I already described 
 the former. The "PolySearchStrategy" on the other side is used for videos where an initial sliding window search gets 
 a first polynomial function and then for subsequent images those polynomial coefficients are used to search around the 
@@ -140,7 +140,7 @@ The radius of curvature boils down to this formula (again assuming that the came
 
 ![Curvature formula][image8]
 
-Those calculations are performed in the "[./src/Metrics.py](Metrics)" class where I also convert the units from pixels 
+Those calculations are performed in the "[Metrics](./src/Metrics.py)" class where I also convert the units from pixels 
 to meters.
 
 #### 6. Result
@@ -154,3 +154,25 @@ The result of all the previous steps is demonstrated in this image:
 Here's a [link to my video result](./output_videos/project_video.mp4).
 
 ### Discussion
+
+After having played around a lot and tested different approaches, I'll provide a review about the final result here.
+
+The pipeline consists of many steps which required extensive tuning of all the parameters. The result shows that 
+it generally performs better than the lane detection in the first project but it still has problems when the lanes 
+cannot be clearly distinguished from other edges. Also, tuning the parameters raises the issue that the pipeline might 
+perform good on a couple of examples but worse on other examples which are taken with a different camera.
+
+Moreover, I can also think of a few examples where it requires additional decision logic. For example, at roadworks 
+in Germany there are often temporarily road lanes on top of the original ones where the pipeline would have to decide 
+which are currently valid. Of course, there are also environmental conditions like snow where the lanes cannot be 
+detected anymore.
+
+If I would further pursue this project, I would first add statistical methods and sanity checks to smoothen the lane 
+prediction and filter out falsely detected pixels. My first approach which I already took on this did not work properly 
+because the gaps of missing lanes were too big and therefore it is not included in the current pipeline. So, I would 
+also consider looking for better edge detection methods for lane detection than Sobel-filters and Canny edges. 
+
+Furthermore, I currently use a large area for the perspective transform which works for straight roads but causes 
+problems for curvy roads (e.g. [harder_challenge_video.mp4](./harder_challenge_video.mp4)) because it then detects too 
+much pixels which are not part of the road. My idea is to adjust the distance of the area to the radius of curvature. 
+Roads with high curvature would then have a decreased area for higher accuracy.
